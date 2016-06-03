@@ -22,14 +22,15 @@ import cv2
 import numpy
 import collections
 from camShift import camShift
+import tensor
 
 
 sim = True
 if sim:
     #handle = simulator.simulator("/home/boka/arp/david/")
     #handle = simulator.simulator("/home/boka/arp/vot-toolkit/workspace/sequences/cup/")
-    #handle = simulator.simulator("/home/boka/arp/vot-toolkit/workspace/sequences/woman/")
-    handle = simulator.simulator("/home/boka/arp/vot-toolkit/workspace/sequences/juice/")
+    handle = simulator.simulator("/home/boka/arp/vot-toolkit/workspace/sequences/woman/")
+    #handle = simulator.simulator("/home/boka/arp/vot-toolkit/workspace/sequences/juice/")
     #handle = simulator.simulator("/home/boka/arp/vot-toolkit/workspace/sequences/jump/")
 else:
     handle = vot.VOT("rectangle")
@@ -52,6 +53,7 @@ if sim:
     plt.ion()
     plt.figure()
 while True:
+    plt.clf()
     imagefile = handle.frame()
     if not imagefile:
         print("break")
@@ -69,25 +71,26 @@ while True:
     if (abs(region.x - regionOrg.x) / float(region.width) < 0.05 and abs(region.y - regionOrg.y) / float(region.height) < 0.05) or (
             abs(region_flow.x - regionOrg.x) / float(region.width) < 0.05 and abs(
                     region_flow.y - regionOrg.y) / float(region.height) < 0.05):
-        print("updatalo bo")
         tracker_OT.updateTree(image)
-        print("updatalo je tree")
+
 
     if conf > 0.70 and (abs(region_flow.x - regionOrg.x) / float(region.width) > 0.3 or abs(
                 region_flow.y - regionOrg.y) / float(region.height) > 0.3):
         print("popravil bi mogoce")
-        if not ((abs(region.x - regionOrg.x) / float(region.width) < 0.3 and abs(region.y - regionOrg.y) / float(region.height) < 0.3) or (
-            abs(region_flow.x - region_mean.x) / float(region.width) < 0.3 and abs(
-                    region_flow.y - region_mean.y) / float(region.height) < 0.3)):
+        if not ((abs(region_flow.x - region_mean.x) / float(region_flow.width) < 0.3 and abs(region_mean.y - region_flow.y) / float(region_flow.height) < 0.3) or (
+            abs(region_flow.x - region_mean.x) / float(region_mean.width) < 0.3 and abs(
+                    region_flow.y - region_mean.y) / float(region_mean.height) < 0.3)):
             tracker_flow.set_position(tracker_OT.position)
             tracker_mean.set_position(tracker_OT.position)
             #region_flow = regionOrg
             print("popravil polozaj")
 
     #print("popravki")
+    tensor.run_inference_on_image(image)
     handle.report(region_flow)
     if sim:
-        plt.clf()
+
+        plt.figure(2)
         a = plt.imshow(image)
         currentAxis = plt.gca()
         currentAxis.add_patch(

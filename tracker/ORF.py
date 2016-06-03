@@ -211,8 +211,8 @@ class flow(object):
         right = int(min(round(self.position[0] + self.size[0]), image2.shape[1] - 1))
         bottom = int(min(round(self.position[1] + self.size[1]), image2.shape[0] - 1))
         if right - left < self.template.shape[1] or bottom - top < self.template.shape[0]:
-            return vot.Rectangle(self.position[0] + self.size[0] / 2, self.position[1] + self.size[1] / 2, self.size[0],
-                                 self.size[1])
+            return [0, vot.Rectangle(self.position[0] + self.size[0] / 2, self.position[1] + self.size[1] / 2, self.size[0],
+                                 self.size[1])]
 
         cut = image2[top:bottom, left:right]
 
@@ -227,33 +227,43 @@ class flow(object):
                                                    self.settings, self.param, weights_prediction, False)[0]
                 predicta += [(pred['pred_prob'][0][1],i,j)]
 
+        if len(predicta) < 1:
+            return [0, vot.Rectangle(self.position[0] + self.size[0] / 2, self.position[1] + self.size[1] / 2,
+                                     self.size[0],
+                                     self.size[1])]
+
         terk = predicta[0]
         for i in range(0, len(predicta)):
             if terk[0] < predicta[i][0]:
                 terk = predicta[i]
 
-        t = self.size[1] / 2*0.9
-        l = self.size[0] / 2*0.9
-        imclass = image2[int(terk[1] - t):int(terk[1] + t), int(terk[2] - l):int(terk[2] + l)]
+        t = self.size[1] / 2*0.8
+        l = self.size[0] / 2*0.8
+        imclass = image2[int(top + terk[1] - t):int(top + terk[1] + t), int(left + terk[2] - l):int(left +terk[2] + l)]
         predmin = \
         self.mf.evaluate_predictions(self.data, array([np.bincount(imclass.flatten().astype(int), minlength=45)]), [1], \
                                      self.settings, self.param, weights_prediction, False)[0]
 
-        t = self.size[1] / 2*1.1
-        l = self.size[0] / 2*1.1
-        imclass = image2[int(terk[1] - t):int(terk[1] + t), int(terk[2] - l):int(terk[2] + l)]
+        t = self.size[1] / 2*1.2
+        l = self.size[0] / 2*1.2
+        imclass = image2[int(top + terk[1] - t):int(top + terk[1] + t), int(left + terk[2] - l):int(left + terk[2] + l)]
         predmax = \
             self.mf.evaluate_predictions(self.data, array([np.bincount(imclass.flatten().astype(int), minlength=45)]),
                                          [1], \
                                          self.settings, self.param, weights_prediction, False)[0]
+
         if predmax['pred_prob'][0][1] > predmin['pred_prob'][0][1]:
             if predmax['pred_prob'][0][1] > terk[0]:
-                self.size = (int(self.size[0]*1.1), int(self.size[1]*1.1))
+                print(self.size)
+                self.size = (int(self.size[0]*1.2), int(self.size[1]*1.2))
                 print("povecal")
+                print(self.size)
         else:
             if predmin['pred_prob'][0][1] > terk[0]:
-                self.size = (int(self.size[0] * 0.9), int(self.size[1] * 0.9))
+                self.size = (int(self.size[0] * 0.8), int(self.size[1] * 0.8))
                 print("pomanjsal")
         print(terk[0])
+        print(predmin['pred_prob'][0][1])
+        print(predmax['pred_prob'][0][1])
         self.position = (left + terk[2], top + terk[1])
         return [terk[0], vot.Rectangle(left+ terk[2]-l, top + terk[1] -t, self.size[0], self.size[1])]

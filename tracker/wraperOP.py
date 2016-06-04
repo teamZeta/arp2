@@ -23,13 +23,16 @@ import numpy
 import collections
 from camShift import camShift
 import tensor
+from sklearn.metrics.pairwise import euclidean_distances
+from multiprocessing import Process, Pipe
 
 
-sim = True
+
+sim = False
 if sim:
     #handle = simulator.simulator("/home/boka/arp/david/")
-    #handle = simulator.simulator("/home/boka/arp/vot-toolkit/workspace/sequences/cup/")
-    handle = simulator.simulator("/home/boka/arp/vot-toolkit/workspace/sequences/woman/")
+    handle = simulator.simulator("/home/boka/arp/vot-toolkit/workspace/sequences/cup/")
+    #handle = simulator.simulator("/home/boka/arp/vot-toolkit/workspace/sequences/woman/")
     #handle = simulator.simulator("/home/boka/arp/vot-toolkit/workspace/sequences/juice/")
     #handle = simulator.simulator("/home/boka/arp/vot-toolkit/workspace/sequences/jump/")
 else:
@@ -48,10 +51,13 @@ tracker = NCCTracker(image, selection)
 tracker_flow = medianFlow.flow(image, selection)
 tracker_OT = ORF.flow(image, selection)
 tracker_mean = camShift(image, selection)
+root = image[selection.y:selection.y + selection.height,selection.x:selection.x + selection.width]
 print("do tukej")
 if sim:
     plt.ion()
     plt.figure()
+
+stevec = 0
 while True:
     plt.clf()
     imagefile = handle.frame()
@@ -60,13 +66,12 @@ while True:
         break
 
     image = cv2.imread(imagefile, cv2.IMREAD_COLOR)
-    #print("zac")
     region = tracker.track(image)
-    #print("ncc")
     [conf, regionOrg] = tracker_OT.track(image)
-    #print("orf")
     region_flow = tracker_flow.track(image)
     region_mean = tracker_mean.track(image)
+
+    regions = [region, region_flow, regionOrg, region_mean]
     #print("shft")
     if (abs(region.x - regionOrg.x) / float(region.width) < 0.05 and abs(region.y - regionOrg.y) / float(region.height) < 0.05) or (
             abs(region_flow.x - regionOrg.x) / float(region.width) < 0.05 and abs(
@@ -85,12 +90,40 @@ while True:
             #region_flow = regionOrg
             print("popravil polozaj")
 
-    #print("popravki")
-    tensor.run_inference_on_image(image)
+
+    if stevec == 0:
+        images = [root]
+        for r in regions:
+            print(r.x)
+            print(r.height)
+            cut = image[r.y:r.y + r.height,r.x:r.x+r.width]
+            images += [cut]
+        print(images)
+        proces, proces2 = Pipe()
+        p = Process(target=tensor.get_closest, args=(proces2, images))
+        p.start()
+
+    stevec+=1
+    if stevec == 8:
+        rec = proces.recv()[0]
+        stevec = 0
+        p.join()
+        if rec == 1:
+            tracker.set_region(regions[rec])
+            tracker_flow.set_region(regions[rec])
+            tracker_mean.set_region(regions[rec])
+            tracker_OT.set_region(regions[rec])
+
+            region = regions[rec]
+            region_flow = regions[rec]
+            region_mean = regions[rec]
+            regionOrg  = regions[rec]
+
+
     handle.report(region_flow)
     if sim:
 
-        plt.figure(2)
+        #plt.figure(2)
         a = plt.imshow(image)
         currentAxis = plt.gca()
         currentAxis.add_patch(
@@ -108,3 +141,4 @@ while True:
 
 if sim:
     plt.show()
+

@@ -30,6 +30,11 @@ class flow(object):
         self.position = (position[0], position[1])
         self.bb = [position[0]- self.size[0]/2, position[1]- self.size[1]/2, position[0]+ self.size[0]/2, position[1]+ self.size[1]/2]
 
+    def set_region(self, region):
+        self.position = (int(region.x + region.width / 2), int(region.y + region.height / 2))
+        self.size = (region.width, region.height)
+        self.bb = [self.position[0] - self.size[0] / 2, self.position[1] - self.size[1] / 2, self.position[0]+ self.size[0]/2, self.position[1]+ self.size[1]/2]
+
     def track(self, image):
 
 
@@ -37,7 +42,7 @@ class flow(object):
 
         # self.bb = [left, top, self.region.width, self.region.height]
 
-
+        print(self.bb)
         newbb, shift = fbtrack(self.oldg, newg, self.bb, 12, 12, 3, 12)
         self.oldg = newg
         self.bb = newbb
@@ -52,10 +57,8 @@ class flow(object):
         right = int(min(round(self.position[0] + float(self.window) / 2), image.shape[1] - 1))
         bottom = int(min(round(self.position[1] + float(self.window) / 2), image.shape[0] - 1))
 
-
         if self.bb[0] < 0 or self.bb[1] < 0 or self.bb[1] >= image.shape[1] or self.bb[3] >= image.shape[0]:
             print("NOTER JE PRISLO")
             return vot.Rectangle(1, 1, self.size[0], self.size[1])
-
 
         return vot.Rectangle(self.bb[0], self.bb[1], self.bb[2]-self.bb[0], self.bb[3]-self.bb[1])

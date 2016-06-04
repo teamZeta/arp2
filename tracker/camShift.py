@@ -36,6 +36,12 @@ class camShift(object):
         self.bb = [position[0] - self.size[0] / 2, position[1] - self.size[1] / 2, self.size[0],
                    self.size[1]]
 
+    def set_region(self, region):
+        self.position = (int(region.x + region.width / 2), int(region.y + region.height / 2))
+        self.size = (region.width, region.height)
+        self.bb = [self.position[0] - self.size[0] / 2, self.position[1] - self.size[1] / 2, self.size[0],
+                   self.size[1]]
+
     def track(self, image):
         left = int(max(round(self.position[0] - float(self.window) / 2), 0))
         top = int(max(round(self.position[1] - float(self.window) / 2), 0))
@@ -51,12 +57,10 @@ class camShift(object):
         img = image[top:bottom, left:right]
         hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
         dst = cv2.calcBackProject([hsv], [0], self.roi_hist, [0, 180], 1)
-        plt.figure(1)
-        a = plt.imshow(dst)
+        #plt.figure(1)
+        #a = plt.imshow(dst)
         ret, track_window = cv2.meanShift(dst, (self.bb[0]-left, self.bb[1]-top, self.bb[2], self.bb[3]), self.term_crit)
         self.position = (left + track_window[0] + int(track_window[2]/2), top + track_window[1] + int(track_window[3]/2))
-        #self.size = (int(track_window[2]), int(track_window[3]) )
         self.bb = [left + track_window[0], top + track_window[1], track_window[2], track_window[3]]
-        print(track_window)
         return vot.Rectangle(left + track_window[0], top + track_window[1], track_window[2], track_window[3])
 

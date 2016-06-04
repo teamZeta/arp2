@@ -73,7 +73,6 @@ class flow(object):
 
         vred = [(0, 0)]
         infloop = 0
-        print("pred pos")
         while(1):
             l = random.randint(-int((right - left) * 0.03), int((right - left) * 0.03))
             t = random.randint(-int((bottom - top) * 0.03), int((bottom - top) * 0.03))
@@ -86,7 +85,6 @@ class flow(object):
         self.pos = np.array(
             [np.array(self.old_img[top + int(t2):bottom + int(t2), left + int(l2):right + int(l2)].copy().tolist()) for (l2, t2) in vred])
         vred = []
-        print("pred neg")
         infloop = 0
         while (1):
             l = random.randint(int((right - left) / 2), int(image.shape[1] - (right - left) / 2 - 1))
@@ -136,6 +134,17 @@ class flow(object):
     def reset_position(self, pos):
         self.position = pos
 
+    def set_position(self, position):
+        self.position = (position[0], position[1])
+        self.size = [position[0] - self.size[0] / 2, position[1] - self.size[1] / 2, position[0] + self.size[0] / 2,
+                   position[1] + self.size[1] / 2]
+
+
+    def set_region(self, region):
+        self.position = (int(region.x + region.width/2), int(region.y + region.height/2))
+        self.size = (region.width, region.height)
+
+
 
     def updateTree(self, img):
         image = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
@@ -155,7 +164,6 @@ class flow(object):
 
         vred = [(0, 0)]
         infloop = 0
-        print("pred pos")
         while (1):
             l2 = random.randint(-int((right - left) * 0.03), int((right - left) * 0.03))
             t2 = random.randint(-int((bottom - top) * 0.03), int((bottom - top) * 0.03))
@@ -167,7 +175,6 @@ class flow(object):
         self.pos = np.array(
             [np.array(image[top + t2:bottom + t2, left + l2:right + l2].copy().tolist()) for (l2, t2) in vred])
         vred = []
-        print("pred neg" + str(len(self.pos[0])))
         infloop = 0
         while (1):
             l2 = random.randint((right - left) / 2, image.shape[1] - (right - left) / 2 - 1)
@@ -197,7 +204,7 @@ class flow(object):
         self.data['x_train'] = np.append(self.data['x_train'], array(x_train), axis=0)
         self.data['y_train'] = np.append(self.data['y_train'], array(np.ones(len(self.pos)).astype(int).tolist() + np.zeros(len(self.neg)).astype(int).tolist()))
         self.mf.partial_fit(self.data, array(range(len(self.data['x_train'])-len(x_train), len(self.data['x_train']))), self.settings, self.param, self.cache)
-        print("konec")
+
 
     def track(self, img):
         image = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
@@ -237,15 +244,15 @@ class flow(object):
             if terk[0] < predicta[i][0]:
                 terk = predicta[i]
 
-        t = self.size[1] / 2*0.8
-        l = self.size[0] / 2*0.8
+        t = self.size[1] / 2*0.9
+        l = self.size[0] / 2*0.9
         imclass = image2[int(top + terk[1] - t):int(top + terk[1] + t), int(left + terk[2] - l):int(left +terk[2] + l)]
         predmin = \
         self.mf.evaluate_predictions(self.data, array([np.bincount(imclass.flatten().astype(int), minlength=45)]), [1], \
                                      self.settings, self.param, weights_prediction, False)[0]
 
-        t = self.size[1] / 2*1.2
-        l = self.size[0] / 2*1.2
+        t = self.size[1] / 2*1.1
+        l = self.size[0] / 2*1.1
         imclass = image2[int(top + terk[1] - t):int(top + terk[1] + t), int(left + terk[2] - l):int(left + terk[2] + l)]
         predmax = \
             self.mf.evaluate_predictions(self.data, array([np.bincount(imclass.flatten().astype(int), minlength=45)]),
@@ -254,16 +261,10 @@ class flow(object):
 
         if predmax['pred_prob'][0][1] > predmin['pred_prob'][0][1]:
             if predmax['pred_prob'][0][1] > terk[0]:
-                print(self.size)
-                self.size = (int(self.size[0]*1.2), int(self.size[1]*1.2))
-                print("povecal")
-                print(self.size)
+                self.size = (int(self.size[0]*1.1), int(self.size[1]*1.1))
+
         else:
             if predmin['pred_prob'][0][1] > terk[0]:
-                self.size = (int(self.size[0] * 0.8), int(self.size[1] * 0.8))
-                print("pomanjsal")
-        print(terk[0])
-        print(predmin['pred_prob'][0][1])
-        print(predmax['pred_prob'][0][1])
+                self.size = (int(self.size[0] * 0.9), int(self.size[1] * 0.9))
         self.position = (left + terk[2], top + terk[1])
         return [terk[0], vot.Rectangle(left+ terk[2]-l, top + terk[1] -t, self.size[0], self.size[1])]

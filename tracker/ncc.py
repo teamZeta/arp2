@@ -28,6 +28,11 @@ class NCCTracker(object):
         self.position = (region.x + region.width / 2, region.y + region.height / 2)
         self.size = (region.width, region.height)
 
+    def set_region(self, region):
+        self.position = (int(region.x + region.width / 2), int(region.y + region.height / 2))
+        self.size = (region.width, region.height)
+        self.window = max(region.width, region.height) * 2
+
     def track(self, image):
         image = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
         left = int(max(round(self.position[0] - float(self.window) / 2), 0))
